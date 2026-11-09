@@ -1,0 +1,12 @@
+#if 0
+#ifndef LWLOG_CONFIG_H
+#define LWLOG_CONFIG_H
+
+#define LWLOG_OUTPUT_LEVEL (LWLOG_LEVEL_INFO)
+
+#define LWLOG_USE_TIMESTAMP (1U)
+
+#define LWLOG_LINE_MAX (128U)
+
+#endif
+#endif
