@@ -22,9 +22,10 @@ The library provides these defaults for omitted settings:
 #define LWLOG_OUTPUT_LEVEL LWLOG_LEVEL_INFO
 #define LWLOG_USE_TIMESTAMP 1U
 #define LWLOG_LINE_MAX 128U
+#define LWLOG_USE_COLOR 1U
 ```
 
-The output threshold is 0 through 4 inclusive (`NONE`, `ERROR`, `WARN`, `INFO`, `DEBUG`). Values outside that range are compile errors. `LWLOG_LINE_MAX` must be at least 32 bytes. Zero disables timestamps; a nonzero value enables them.
+The output threshold is 0 through 4 inclusive (`NONE`, `ERROR`, `WARN`, `INFO`, `DEBUG`). Values outside that range are compile errors. `LWLOG_LINE_MAX` must be at least 32 bytes. Zero disables timestamps; a nonzero value enables them. A nonzero value (the default) adds ANSI SGR colour sequences to normal and assertion output, which the port must pass through unchanged and the receiving terminal must interpret; zero emits plain text.
 
 The threshold applies only to the four level macros. A disabled macro expands to `((void)0)`, so do not put required side effects in its tag, format or argument expressions. `lwlog_write()` and `lwlog_assert()` are not filtered, even at `LWLOG_LEVEL_NONE`.
 
@@ -36,7 +37,7 @@ void lwlog_port_output(const char *buf, uint32_t len);
 
 Consume exactly `len` bytes synchronously, or copy them into storage owned by the port before returning. The bytes are not a NUL-terminated string. Do not save the pointer or start DMA directly from it and return: normal output uses a local stack buffer, and assertion digits are also stack objects. A port-owned queue is possible, but queue capacity, copying, backpressure and failure policy remain the port's responsibility.
 
-A normal log call invokes the output hook once. Assertion output uses several calls: a prefix, file name, colon, individual decimal digits and CRLF. Do not append newlines in the hook. There is no return value and therefore no way to report a dropped or partially transmitted line to the library. Do not call the logger recursively from either port hook.
+A normal log call invokes the output hook once. Assertion output uses several calls: the error colour when enabled, a prefix, file name, colon, individual decimal digits and the reset plus CRLF. Do not append newlines in the hook. There is no return value and therefore no way to report a dropped or partially transmitted line to the library. Do not call the logger recursively from either port hook.
 
 ## Clock contract
 
@@ -56,9 +57,9 @@ void lwlog_write(char level, const char *tag, const char *fmt, ...);
 
 Supply non-NULL, NUL-terminated `tag` and `fmt` strings and arguments matching the format. The function does not validate them or interpret the level character. Use trusted format strings, for example `LWLOG_I("NET", "%s", received_text)`, rather than passing external text as a format string.
 
-The grammar is `[milliseconds] level tag: message\r\n`, or `level tag: message\r\n` without timestamps. There is no escaping or splitting of embedded newlines. Formatting capabilities, including floating point, wide strings and 64-bit integers, are properties of the target's libc, not guarantees of lwlog.
+The grammar is `[milliseconds] level tag: message\r\n`, or `level tag: message\r\n` without timestamps. With colour enabled, a five-byte SGR sequence precedes the line and a four-byte reset sequence precedes the CRLF. There is no escaping or splitting of embedded newlines. Formatting capabilities, including floating point, wide strings and 64-bit integers, are properties of the target's libc, not guarantees of lwlog.
 
-`LWLOG_LINE_MAX` is the buffer size, not the maximum message length. Prefix and message together occupy at most `LWLOG_LINE_MAX - 3` bytes; CRLF adds two bytes, so at most `LWLOG_LINE_MAX - 1` bytes reach the port. A long tag can consume the entire prefix budget, leaving no room for the colon or message. Truncation does not add an ellipsis and can split multibyte text.
+`LWLOG_LINE_MAX` is the buffer size, not the maximum message length. Without colour, prefix and message together occupy at most `LWLOG_LINE_MAX - 3` bytes; CRLF adds two bytes, so at most `LWLOG_LINE_MAX - 1` bytes reach the port. Enabling colour consumes the same buffer, reducing the prefix-plus-message budget to `LWLOG_LINE_MAX - 12`; the single output call per normal line is unchanged. A long tag can consume the entire prefix budget, leaving no room for the colon or message. Truncation does not add an ellipsis and can split multibyte text.
 
 If prefix formatting returns a negative result, nothing is output. If message formatting returns a negative result, the prefix and CRLF are still output; no error status is returned. The library itself does not allocate or keep mutable static state, but it reserves `LWLOG_LINE_MAX` bytes on each normal call's stack in addition to formatter and port stack use. Check the linked call graph and worst-case formats when sizing a task stack.
 
@@ -70,7 +71,7 @@ The current source uses `%u` for the timestamp and passes `strlen(file)` to the 
 void lwlog_assert(const char *file, int line);
 ```
 
-Output is `ASSERT file:line\r\n`. A NULL file pointer becomes `?`; other file pointers must name valid NUL-terminated strings. The line is converted to `uint32_t` and printed as decimal, so callers normally pass a nonnegative value such as `__LINE__`.
+Output is `ASSERT file:line\r\n`, wrapped in the error colour and reset when `LWLOG_USE_COLOR` is enabled. A NULL file pointer becomes `?`; other file pointers must name valid NUL-terminated strings. The line is converted to `uint32_t` and printed as decimal, so callers normally pass a nonnegative value such as `__LINE__`.
 
 This path uses literal fragments, `strlen()` and a small integer-to-decimal helper. It does not call `snprintf` / `vsnprintf`, allocate the normal line buffer, read the clock or check the log threshold. The file name is not truncated: the total assertion length is not bounded by `LWLOG_LINE_MAX`.
 
@@ -100,6 +101,7 @@ Task or main-loop logging is the intended integration. Interrupt-context safety 
 - Timestamps are milliseconds; a timestamp-disabled build links without the clock hook.
 - Disabled log macros do not hide required application side effects.
 - The normal stack budget includes the buffer, libc formatting and port.
+- When colour is enabled, the viewer interprets ANSI sequences and the reduced message budget still holds the longest prefix and message.
 - Shared output is serialized across whole operations, including assertion fragments.
 - The assertion caller owns halt/reset policy, and the chosen transport can progress in that context.
 - Target ABI and format-specifier support have been checked against the linked C runtime.

@@ -13,4 +13,8 @@
 #define LWLOG_LINE_MAX 128U
 #endif
 
+#ifndef LWLOG_USE_COLOR
+#define LWLOG_USE_COLOR 0U
+#endif
+
 #endif

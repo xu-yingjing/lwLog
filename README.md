@@ -10,12 +10,13 @@ Supported:
 
 - Error, warning, info and debug macros with compile-time filtering. Disabled macros do not evaluate their arguments.
 - An optional millisecond timestamp and a caller-supplied tag.
+- ANSI SGR colours, enabled by default: normal lines are coloured by level and assertions are red. Define `LWLOG_USE_COLOR` as zero for plain text.
 - Bounded normal log lines, including a trailing CRLF even when the message or tag is truncated.
 - Raw `ASSERT file:line` output, independent of the configured log level, timestamp and normal line buffer.
 
 Not supplied, by design:
 
-- Runtime filtering, multiple destinations, colours, file storage or an asynchronous queue.
+- Runtime filtering, multiple destinations, file storage or an asynchronous queue.
 - Transport initialisation, locking, interrupt-context safety or a panic/halt policy.
 - A formatter independent of libc. Available format specifiers and additional stack use depend on the linked C runtime.
 
@@ -30,6 +31,7 @@ Create an application-owned `lwlog_config.h` on the include path:
 #define LWLOG_OUTPUT_LEVEL LWLOG_LEVEL_INFO
 #define LWLOG_USE_TIMESTAMP 1U
 #define LWLOG_LINE_MAX 128U
+#define LWLOG_USE_COLOR 1U
 
 #endif
 ```
@@ -68,7 +70,7 @@ void app_start(void)
 }
 ```
 
-With a clock reading of 123 ms, the first line is `[123] I APP: boot ok\r\n`. With timestamps disabled it is `I APP: boot ok\r\n`. No extra newline is needed in the format string.
+With a clock reading of 123 ms, the first line is `[123] I APP: boot ok\r\n`, wrapped in `\x1b[32m` and `\x1b[0m` with the reset preceding the CRLF. With timestamps disabled it is `I APP: boot ok\r\n`. Set `LWLOG_USE_COLOR` to zero for plain text. No extra newline is needed in the format string.
 
 ## Configuration
 
@@ -78,7 +80,8 @@ The header is required even if it only contains an include guard: omitted settin
 | --- | --- | --- |
 | `LWLOG_OUTPUT_LEVEL` | `LWLOG_LEVEL_INFO` | `NONE` (0), `ERROR` (1), `WARN` (2), `INFO` (3) or `DEBUG` (4); includes every level at or below the threshold. |
 | `LWLOG_USE_TIMESTAMP` | `1U` | Zero removes the timestamp and the clock-hook dependency; any nonzero value enables it. |
-| `LWLOG_LINE_MAX` | `128U` | Buffer bytes per normal call; minimum 32, including space reserved for formatting and CRLF. |
+| `LWLOG_LINE_MAX` | `128U` | Buffer bytes per normal call; minimum 32, including space reserved for formatting, CRLF and, when enabled, colour sequences. |
+| `LWLOG_USE_COLOR` | `1U` | Any nonzero value prefixes normal lines with the level's ANSI SGR colour (error red, warning yellow, info green, debug grey), inserts a reset before the CRLF, and writes assertions in red. Zero emits plain text. The receiving terminal must interpret ANSI escape sequences. |
 
 Use a deferred macro definition such as `#define LWLOG_OUTPUT_LEVEL LWLOG_LEVEL_DEBUG` in the configuration header. The level constants are defined after that header is included, so do not test those constants with `#if` inside it.
 

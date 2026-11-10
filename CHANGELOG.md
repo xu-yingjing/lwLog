@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Add ANSI SGR colours controlled by `LWLOG_USE_COLOR`, enabled by default. Normal lines are coloured by level (error red, warning yellow, info green, debug grey) with a reset before the CRLF; `lwlog_assert()` output is red. Define `LWLOG_USE_COLOR` as zero for plain text.
+- The colour and reset sequences share the existing `LWLOG_LINE_MAX` stack buffer, so the prefix-plus-message budget shrinks by 9 bytes when colour is enabled. The single output call per normal line and the plain-text output are unchanged.
+
 ## 0.1.0
 
 Initial standalone packaging of the in-tree embedded logger.

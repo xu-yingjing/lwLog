@@ -29,6 +29,10 @@
 #error "LWLOG_LINE_MAX must be at least 32"
 #endif
 
+#ifndef LWLOG_USE_COLOR
+#define LWLOG_USE_COLOR (1U)
+#endif
+
 #if (LWLOG_OUTPUT_LEVEL >= LWLOG_LEVEL_ERROR)
 #define LWLOG_E(tag, ...) lwlog_write('E', (tag), __VA_ARGS__)
 #else
