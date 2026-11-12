@@ -5,6 +5,10 @@
 #define LWLOG_OUTPUT_LEVEL LWLOG_LEVEL_INFO
 #endif
 
+#ifndef LWLOG_USE_LOCK
+#define LWLOG_USE_LOCK 1U
+#endif
+
 #ifndef LWLOG_USE_TIMESTAMP
 #define LWLOG_USE_TIMESTAMP 1U
 #endif

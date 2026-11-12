@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+- Add optional output serialization controlled by `LWLOG_USE_LOCK`, enabled by default. A lock-enabled build calls `lwlog_init()` once and links `lwlog_port_lock_init()`, `lwlog_port_lock()` and `lwlog_port_unlock()`; setting `LWLOG_USE_LOCK` to zero removes the lock calls and hook dependencies.
+- `lwlog_write()` formats the complete line first and then holds the lock for the single output-hook call, so normal lines are serialized without keeping the clock or libc formatter inside the critical section.
+- `lwlog_assert()` never takes the normal lock. It remains available in fault, interrupt and critical contexts where blocking on a task mutex could deadlock, at the cost of allowing assertion fragments to interleave with other output. Port hooks must not call the logger recursively.
+- Fix a potential signed-integer overflow when `vsnprintf()` reports more characters than the remaining line capacity; the formatter now clamps before adding.
+- Update the configuration template, example and documentation for the lock contract, and exercise lock initialisation, normal lock pairing and the assertion lock bypass in the demo.
+
 ## 0.1.1
 
 - Add ANSI SGR colours controlled by `LWLOG_USE_COLOR`, enabled by default. Normal lines are coloured by level (error red, warning yellow, info green, debug grey) with a reset before the CRLF; `lwlog_assert()` output is red. Define `LWLOG_USE_COLOR` as zero for plain text.

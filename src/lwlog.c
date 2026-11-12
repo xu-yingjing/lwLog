@@ -49,6 +49,13 @@ static void lwlog_put_u32(uint32_t value)
     }
 }
 
+void lwlog_init(void)
+{
+#if (LWLOG_USE_LOCK != 0)
+    lwlog_port_lock_init();
+#endif
+}
+
 void lwlog_assert(const char *file, int line)
 {
     static const char prefix[] = "ASSERT ";
@@ -116,9 +123,10 @@ void lwlog_write(char level, const char *tag, const char *fmt, ...)
     va_end(ap);
 
     if (m > 0) {
-        n += m;
-        if ((size_t)n > (size_t)max_text) {
+        if ((uint32_t)m > (max_text - (uint32_t)n)) {
             n = (int)max_text;
+        } else {
+            n += m;
         }
     }
 
@@ -133,5 +141,13 @@ void lwlog_write(char level, const char *tag, const char *fmt, ...)
     buf[pos++] = '\r';
     buf[pos++] = '\n';
 
+#if (LWLOG_USE_LOCK != 0)
+    lwlog_port_lock();
+#endif
+
     lwlog_port_output(buf, pos);
+
+#if (LWLOG_USE_LOCK != 0)
+    lwlog_port_unlock();
+#endif
 }

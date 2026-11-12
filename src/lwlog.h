@@ -17,6 +17,10 @@
 #error "LWLOG_OUTPUT_LEVEL must be one of LWLOG_LEVEL_*"
 #endif
 
+#ifndef LWLOG_USE_LOCK
+#define LWLOG_USE_LOCK (1U)
+#endif
+
 #ifndef LWLOG_USE_TIMESTAMP
 #define LWLOG_USE_TIMESTAMP (1U)
 #endif
@@ -56,6 +60,8 @@
 #else
 #define LWLOG_D(tag, ...) ((void)0)
 #endif
+
+void lwlog_init(void);
 
 void lwlog_assert(const char *file, int line);
 
